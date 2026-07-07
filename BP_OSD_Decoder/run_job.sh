@@ -1,19 +1,22 @@
 #!/bin/bash
-#SBATCH --job-name=qecc
+#SBATCH --job-name=BP_OSD_Decoder
 #SBATCH --output=logs/%x_%j.out
 #SBATCH --error=logs/%x_%j.err
-#SBATCH --time=36:00:00
-#SBATCH --cpus-per-task=40
-#SBATCH --gres=gpu:0
+#SBATCH --time=50:00:00
+#SBATCH --cpus-per-task=30
+#SBATCH --gres=gpu:2
+#SBATCH --mail-user=harsh.kapoor@research.iiit.ac.in
+#SBATCH --mail-type=ALL
+
 
 echo "START"
 date
 hostname
 
-workon general
-uv run decoder.py
+source /home2/harsh.kapoor/general/bin/activate
 
-both echo "END" date
+# Run the script using the environment's python
+python Decoder.py
 
-
-
+echo "END"
+date
