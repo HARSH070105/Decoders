@@ -5,47 +5,62 @@ from concurrent.futures import ProcessPoolExecutor
 from scipy import sparse
 from itertools import product
 
-# Import matrices 
-from GB.gb_254_28 import HX as HX_A1, HZ as HZ_A1
-from GHGP.ghgp_882_24 import HX as HX_B1, HZ as HZ_B1
+from Load_codes import load_code
+
+# Load the matrices directly from the generated .npz files
+HX_A1, HZ_A1 = load_code("codes/gb_254_28.npz")
+HX_B1, HZ_B1 = load_code("codes/ghp_882_24.npz")
 
 # --- Configuration ---
 p_list = np.linspace(0.01, 0.14, 8)
 max_iter = 32
 nms_factor = 0.625
-OSD_ORDER = 0          # 0 = original OSD-0 behavior. Try 6-12 to push past the error floor.
-TARGET_ERRORS = 50
-MAX_TRIALS = 50000
-BATCH_SIZE = 1000
-N_WORKERS = None        # None -> os.cpu_count()
+OSD_ORDER = 0
+
+TARGET_ERRORS = 50          # stop early once we have enough errors for a good estimate
+BATCH_SIZE = 2000
+
+# --- Adaptive trial budget ---
+# Low-p / high-performing configs (e.g. B1+OSD) can have WER far below 1e-5.
+# A fixed MAX_TRIALS=50000 can NEVER see a single error there, which is exactly
+# why the previous plot pinned to a flat floor. Instead we let each point run
+# until it either finds TARGET_ERRORS, or hits a per-point ceiling that scales
+# with how rare we expect errors to be at that p.
+MIN_TRIALS_PER_POINT = 5_000
+GLOBAL_MAX_TRIALS = 5_000_000   # hard safety ceiling per point (tune to your time budget)
+NO_ERROR_GROWTH_FACTOR = 4      # if zero errors seen, keep multiplying the budget
+CONFIDENCE_Z = 1.96              # ~95% for Wilson interval
+
+
+def wilson_upper_bound(k, n, z=CONFIDENCE_Z):
+    """Wilson score upper bound for a binomial rate, valid even when k=0.
+    Used to report a meaningful *upper bound* on WER instead of silently
+    clamping to 1/max_trials, which was the root bug before."""
+    if n == 0:
+        return 1.0
+    phat = k / n
+    denom = 1 + z**2 / n
+    centre = phat + z**2 / (2 * n)
+    adj = z * np.sqrt((phat * (1 - phat) + z**2 / (4 * n)) / n)
+    return (centre + adj) / denom
 
 
 # ============================== Error channel ==============================
 
 def generate_pauli_error(n, p, rng):
-    """Vectorized depolarizing-channel error draw. Same statistics as the
-    original per-qubit loop: P(X)=P(Z)=P(Y)=p/3 each."""
     r = rng.random(n)
     err_mask = r < p
     t = rng.integers(3, size=n)
     X = np.zeros(n, dtype=np.uint8)
     Z = np.zeros(n, dtype=np.uint8)
-    X[err_mask & (t != 1)] = 1   # t==0 (X) or t==2 (Y)
-    Z[err_mask & (t != 0)] = 1   # t==1 (Z) or t==2 (Y)
+    X[err_mask & (t != 1)] = 1
+    Z[err_mask & (t != 0)] = 1
     return X, Z
 
 
 # ============================== GF(2) linear algebra ==============================
 
 def gf2_rref(H, s):
-    """
-    Full Gauss-Jordan reduction over GF(2), vectorized row-clearing.
-    Returns: pivots (pivot column indices in the order found),
-             M (the fully reduced augmented matrix),
-             s_full (the fully reduced RHS, full length, not truncated),
-             rank (= len(pivots)).
-    Row i of M, for i < rank, is the pivot row for pivots[i].
-    """
     M = H.copy()
     s_full = s.copy()
     m, n = M.shape
@@ -72,13 +87,11 @@ def gf2_rref(H, s):
 
 
 def gf2_solve(H, s):
-    """Drop-in replacement for the original gf2_solve (same signature/output)."""
     pivots, M, s_full, rank = gf2_rref(H, s)
     return pivots, s_full[:rank]
 
 
 def gf2_nullspace(A):
-    """Drop-in replacement for the original gf2_nullspace."""
     pivots, M, _, rank = gf2_rref(A.copy(), np.zeros(A.shape[0], dtype=np.uint8))
     n = A.shape[1]
     pivot_set = set(pivots)
@@ -94,22 +107,6 @@ def gf2_nullspace(A):
 # ============================== OSD ==============================
 
 def osd_decode(H, syndrome, llr, hard_decisions, order=0, max_combos_cap=4096):
-    """
-    OSD-0 (order=0): least-reliable columns are greedily chosen as the
-    pivot/solved set (Gaussian elimination naturally picks the leftmost
-    available column at each step, and columns are pre-sorted least-reliable
-    first) -- so the correction needed to match the residual syndrome is
-    pushed onto the bits you trust least, while reliable bits default to
-    "no extra flip". This is the same convention the original used; only the
-    elimination internals are vectorized here.
-
-    order=k>0: additionally searches all 2^k assignments of the k
-    least-reliable bits *within the free (already-trusted) set* -- the free
-    positions sitting closest to the reliability boundary, where "trust it,
-    don't flip" is weakest -- and keeps whichever syndrome-consistent
-    candidate has the lowest reliability-weighted Hamming cost. This is
-    standard order-w OSD reprocessing, adapted to syndrome decoding.
-    """
     if sparse.issparse(H):
         H = H.toarray()
     n = H.shape[1]
@@ -117,7 +114,7 @@ def osd_decode(H, syndrome, llr, hard_decisions, order=0, max_combos_cap=4096):
     if not np.any(s_res):
         return hard_decisions
 
-    perm = np.argsort(np.abs(llr))          # least reliable first
+    perm = np.argsort(np.abs(llr))
     Hs = H[:, perm]
     pivots, M, s_full, rank = gf2_rref(Hs, s_res)
     pivot_set = set(pivots)
@@ -137,7 +134,7 @@ def osd_decode(H, syndrome, llr, hard_decisions, order=0, max_combos_cap=4096):
     if k == 0:
         return (hard_decisions ^ e_corr) % 2
 
-    test_free = free_cols[:k]                       # k least-reliable free columns
+    test_free = free_cols[:k]
     test_free_orig = [perm[c] for c in test_free]
     M_test = M[:rank, test_free]
 
@@ -148,7 +145,7 @@ def osd_decode(H, syndrome, llr, hard_decisions, order=0, max_combos_cap=4096):
     for combo in product([0, 1], repeat=k):
         combo_arr = np.array(combo, dtype=np.uint8)
         if not combo_arr.any():
-            continue  # already evaluated as the order-0 baseline above
+            continue
         s_candidate = base_s ^ ((M_test @ combo_arr) % 2)
         cand = np.zeros(n, dtype=np.uint8)
         for i, col in enumerate(pivots):
@@ -166,9 +163,6 @@ def osd_decode(H, syndrome, llr, hard_decisions, order=0, max_combos_cap=4096):
 # ============================== Vectorized BP (flooding / normalized min-sum) ==============================
 
 def build_bp_structures(H):
-    """Precompute padded check->variable neighbor tables ONCE per code
-    (not per trial, not per p -- this used to be rebuilt on every single
-    decode() call via LayeredBPDecoder.__init__)."""
     Hc = H.tocsr() if sparse.issparse(H) else sparse.csr_matrix(H)
     m, n = Hc.shape
     indptr, indices = Hc.indptr, Hc.indices
@@ -190,9 +184,6 @@ def build_bp_structures(H):
 
 
 class VectorizedBPDecoder:
-    """Flooding-schedule normalized min-sum BP. See module docstring for the
-    layered -> flooding rationale."""
-
     def __init__(self, structs, max_iter=32, nms_factor=0.625):
         self.s = structs
         self.max_iter = max_iter
@@ -216,7 +207,7 @@ class VectorizedBPDecoder:
                 return guess, var_llr
 
             msg_v2c = var_llr[col_idx] - msg_c2v
-            msg_v2c[~mask] = np.inf   # padding never wins the min, contributes sign +1
+            msg_v2c[~mask] = np.inf
 
             signs = np.sign(msg_v2c)
             signs[signs == 0] = 1.0
@@ -248,19 +239,16 @@ class VectorizedBPDecoder:
 
 
 # ============================== Worker-process state ==============================
-# Each worker process builds its decoder structures ONCE (via the pool
-# initializer) instead of every trial, and never repickles HX/HZ/PX/PZ
-# per task -- only the small (p, apply_osd) tuple crosses the IPC boundary.
 
 _W = {}
 
 def _init_worker(HX, HZ, PX, PZ, max_iter, nms_factor, osd_order):
     global _W
     _W['HX'], _W['HZ'], _W['PX'], _W['PZ'] = HX, HZ, PX, PZ
-    _W['decZ'] = VectorizedBPDecoder(build_bp_structures(HX), max_iter, nms_factor)  # Z-errors via HX
-    _W['decX'] = VectorizedBPDecoder(build_bp_structures(HZ), max_iter, nms_factor)  # X-errors via HZ
+    _W['decZ'] = VectorizedBPDecoder(build_bp_structures(HX), max_iter, nms_factor)
+    _W['decX'] = VectorizedBPDecoder(build_bp_structures(HZ), max_iter, nms_factor)
     _W['osd_order'] = osd_order
-    _W['rng'] = np.random.default_rng()   # OS-entropy seed -> independent stream per worker
+    _W['rng'] = np.random.default_rng()
 
 
 def _run_trial(args):
@@ -281,34 +269,63 @@ def _run_trial(args):
     if apply_osd and not np.all((HZ @ x_hat) % 2 == sZ):
         x_hat = osd_decode(HZ, sZ, llr_x, x_hat, order=W['osd_order'])
 
-    # Success iff the residual error is a stabilizer (in the row space of the
-    # opposing check matrix), equivalently orthogonal to its nullspace --
-    # this part of the original's logic was already correct.
     success_Z = np.all((PZ @ (Z_err ^ z_hat)) % 2 == 0)
     success_X = np.all((PX @ (X_err ^ x_hat)) % 2 == 0)
     return success_Z and success_X
 
 
-# ============================== Simulation driver ==============================
+# ============================== Simulation driver (adaptive budget) ==============================
 
-def simulate(executor, p_list, apply_osd, target_errors, max_trials, batch_size, label=""):
-    results = []
+def simulate(executor, p_list, apply_osd, target_errors, batch_size,
+             min_trials, global_max_trials, label=""):
+    """
+    Runs batches until either `target_errors` logical errors are seen, or the
+    per-point trial ceiling is exhausted. The ceiling GROWS while zero errors
+    have been observed (NO_ERROR_GROWTH_FACTOR), instead of being a fixed
+    MAX_TRIALS that silently clamps the WER estimate to a flat floor.
+
+    Returns:
+        wer_est   : point estimate (errors/trials), or Wilson upper bound
+                    when errors == 0 (so the point is still meaningful and
+                    not an artificial constant).
+        is_censored: True where wer_est is an upper bound, not a direct hit.
+    """
+    wer_results = []
+    censored_flags = []
+
     for p in p_list:
         errors, trials = 0, 0
-        with tqdm(total=target_errors, desc=f"{label} p={p:.3f}") as pbar:
-            while errors < target_errors and trials < max_trials:
-                args = [(p, apply_osd)] * batch_size
-                trial_results = list(executor.map(_run_trial, args, chunksize=50))
-                trials += batch_size
-                new_errors = batch_size - sum(trial_results)
-                errors += new_errors
-                pbar.update(new_errors)
-                pbar.set_postfix({'Trials': trials, 'WER': f"{errors/trials:.2e}"})
-        wer = errors / trials if trials > 0 else 1.0
-        if wer == 0:
-            wer = 1 / max_trials
-        results.append(wer)
-    return np.array(results)
+        ceiling = min_trials
+        pbar = tqdm(desc=f"{label} p={p:.4f}", unit="trial")
+
+        while errors < target_errors and trials < ceiling:
+            args = [(p, apply_osd)] * batch_size
+            trial_results = list(executor.map(_run_trial, args, chunksize=50))
+            trials += batch_size
+            new_errors = batch_size - sum(trial_results)
+            errors += new_errors
+            pbar.update(batch_size)
+            pbar.set_postfix({'errors': errors, 'ceiling': ceiling,
+                               'WER~': f"{errors/trials:.2e}"})
+
+            # Still zero errors and we're near the ceiling -> grow the budget
+            # (this is what lets very-low-WER points, e.g. B1+OSD, actually
+            # resolve instead of hitting a fixed MAX_TRIALS wall).
+            if errors == 0 and trials >= ceiling and ceiling < global_max_trials:
+                ceiling = min(ceiling * NO_ERROR_GROWTH_FACTOR, global_max_trials)
+
+        pbar.close()
+
+        if errors > 0:
+            wer_results.append(errors / trials)
+            censored_flags.append(False)
+        else:
+            # No errors even at the ceiling: report a statistically honest
+            # upper bound instead of an arbitrary 1/max_trials constant.
+            wer_results.append(wilson_upper_bound(0, trials))
+            censored_flags.append(True)
+
+    return np.array(wer_results), np.array(censored_flags)
 
 
 if __name__ == "__main__":
@@ -328,25 +345,40 @@ if __name__ == "__main__":
         PZ = gf2_nullspace(HZ.toarray())
 
         print(f"Simulating {name}...")
-        # ONE pool per code, reused for every p value and both sweeps below --
-        # this used to be 16 pool spin-ups per code (8 p-values x 2 sweeps).
         with ProcessPoolExecutor(
-            max_workers=N_WORKERS,
+            max_workers=None,
             initializer=_init_worker,
             initargs=(HX, HZ, PX, PZ, max_iter, nms_factor, OSD_ORDER),
         ) as executor:
             print("Running vectorized BP only...")
-            res_bp = simulate(executor, p_list, apply_osd=False,
-                               target_errors=TARGET_ERRORS, max_trials=MAX_TRIALS,
-                               batch_size=BATCH_SIZE, label="BP")
+            res_bp, cens_bp = simulate(
+                executor, p_list, apply_osd=False,
+                target_errors=TARGET_ERRORS, batch_size=BATCH_SIZE,
+                min_trials=MIN_TRIALS_PER_POINT,
+                global_max_trials=GLOBAL_MAX_TRIALS, label="BP")
 
             print(f"Running vectorized BP + OSD-{OSD_ORDER}...")
-            res_osd = simulate(executor, p_list, apply_osd=True,
-                                target_errors=TARGET_ERRORS, max_trials=MAX_TRIALS,
-                                batch_size=BATCH_SIZE, label="BP+OSD")
+            res_osd, cens_osd = simulate(
+                executor, p_list, apply_osd=True,
+                target_errors=TARGET_ERRORS, batch_size=BATCH_SIZE,
+                min_trials=MIN_TRIALS_PER_POINT,
+                global_max_trials=GLOBAL_MAX_TRIALS, label="BP+OSD")
 
-        plt.semilogy(p_list, res_bp, 'o-', label=f"{name}, BP")
-        plt.semilogy(p_list, res_osd, 'o--', label=f"{name}, BP+OSD-{OSD_ORDER}")
+        # Plot: solid markers for real hits, open/hollow markers for censored
+        # (upper-bound) points, so you can visually tell floor-limited points
+        # apart from genuinely measured ones.
+        p_bp_solid = p_list[~cens_bp]
+        p_bp_hollow = p_list[cens_bp]
+        p_osd_solid = p_list[~cens_osd]
+        p_osd_hollow = p_list[cens_osd]
+
+        line_bp, = plt.semilogy(p_list, res_bp, '-', color=None, label=f"{name}, BP")
+        plt.semilogy(p_bp_solid, res_bp[~cens_bp], 'o', color=line_bp.get_color())
+        plt.semilogy(p_bp_hollow, res_bp[cens_bp], 'o', mfc='none', color=line_bp.get_color())
+
+        line_osd, = plt.semilogy(p_list, res_osd, '--', label=f"{name}, BP+OSD-{OSD_ORDER}")
+        plt.semilogy(p_osd_solid, res_osd[~cens_osd], 'o', color=line_osd.get_color())
+        plt.semilogy(p_osd_hollow, res_osd[cens_osd], 'o', mfc='none', color=line_osd.get_color())
 
     plt.xlabel("Physical error rate (p)")
     plt.ylabel("Word Error Rate (WER)")
