@@ -15,7 +15,7 @@ def circ_from_poly(exps, ell):
     C = np.zeros((ell, ell), dtype=np.uint8)
     for i in range(ell):
         for j in range(ell):
-            C[i, j] = c[(i - j) % ell]
+            C[i, j] = c[(j - i) % ell]
     return C
 
 
