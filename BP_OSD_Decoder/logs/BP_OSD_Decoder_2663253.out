@@ -1,0 +1,97 @@
+==========================================
+SLURM_JOB_ID = 2663253
+SLURM_NODELIST = gnode006
+SLURM_JOB_GPUS = 
+==========================================
+START
+Thu Aug  6 02:40:22 AM IST 2026
+gnode006
+--- Simulating Code: gb_126_28 ---
+Loading /home2/harsh.kapoor/Decoders/BP_OSD_Decoder/codes/gb_126_28.npz and computing Canonical Logicals...
+Logicals generated: k = 28
+FINAL p = 0.0100 | WER BP = 0.000034 | WER OSD = 0.000032
+
+FINAL p = 0.0200 | WER BP = 0.000812 | WER OSD = 0.000700
+
+FINAL p = 0.0300 | WER BP = 0.006850 | WER OSD = 0.005870
+
+FINAL p = 0.0400 | WER BP = 0.029374 | WER OSD = 0.025720
+
+FINAL p = 0.0500 | WER BP = 0.082366 | WER OSD = 0.073198
+
+FINAL p = 0.0600 | WER BP = 0.171584 | WER OSD = 0.155670
+
+FINAL p = 0.0700 | WER BP = 0.293416 | WER OSD = 0.270518
+
+FINAL p = 0.0800 | WER BP = 0.432796 | WER OSD = 0.405752
+
+FINAL p = 0.0900 | WER BP = 0.571132 | WER OSD = 0.543056
+
+FINAL p = 0.1000 | WER BP = 0.694454 | WER OSD = 0.668202
+
+FINAL p = 0.1100 | WER BP = 0.794404 | WER OSD = 0.772172
+
+FINAL p = 0.1200 | WER BP = 0.869294 | WER OSD = 0.852104
+
+FINAL p = 0.1300 | WER BP = 0.920818 | WER OSD = 0.908704
+
+--- Simulating Code: gb_254_28 ---
+Loading /home2/harsh.kapoor/Decoders/BP_OSD_Decoder/codes/gb_254_28.npz and computing Canonical Logicals...
+Logicals generated: k = 28
+FINAL p = 0.0100 | WER BP = 0.000000 | WER OSD = 0.000000
+
+FINAL p = 0.0200 | WER BP = 0.000006 | WER OSD = 0.000004
+
+FINAL p = 0.0300 | WER BP = 0.000170 | WER OSD = 0.000122
+
+FINAL p = 0.0400 | WER BP = 0.002818 | WER OSD = 0.002290
+
+FINAL p = 0.0500 | WER BP = 0.018544 | WER OSD = 0.015492
+
+FINAL p = 0.0600 | WER BP = 0.070622 | WER OSD = 0.060640
+
+FINAL p = 0.0700 | WER BP = 0.183494 | WER OSD = 0.162730
+
+FINAL p = 0.0800 | WER BP = 0.351784 | WER OSD = 0.321500
+
+FINAL p = 0.0900 | WER BP = 0.544306 | WER OSD = 0.509874
+
+FINAL p = 0.1000 | WER BP = 0.718072 | WER OSD = 0.687288
+
+FINAL p = 0.1100 | WER BP = 0.845344 | WER OSD = 0.822700
+
+FINAL p = 0.1200 | WER BP = 0.925262 | WER OSD = 0.910846
+
+FINAL p = 0.1300 | WER BP = 0.967556 | WER OSD = 0.959674
+
+--- Simulating Code: ghp_882_24 ---
+Loading /home2/harsh.kapoor/Decoders/BP_OSD_Decoder/codes/ghp_882_24.npz and computing Canonical Logicals...
+Logicals generated: k = 24
+FINAL p = 0.0100 | WER BP = 0.000000 | WER OSD = 0.000000
+
+FINAL p = 0.0200 | WER BP = 0.000020 | WER OSD = 0.000000
+
+FINAL p = 0.0300 | WER BP = 0.000370 | WER OSD = 0.000000
+
+FINAL p = 0.0400 | WER BP = 0.001970 | WER OSD = 0.000000
+
+FINAL p = 0.0500 | WER BP = 0.008120 | WER OSD = 0.000000
+
+FINAL p = 0.0600 | WER BP = 0.026914 | WER OSD = 0.000012
+
+FINAL p = 0.0700 | WER BP = 0.075492 | WER OSD = 0.000380
+
+FINAL p = 0.0800 | WER BP = 0.182928 | WER OSD = 0.004202
+
+FINAL p = 0.0900 | WER BP = 0.372756 | WER OSD = 0.028690
+
+FINAL p = 0.1000 | WER BP = 0.612406 | WER OSD = 0.117330
+
+FINAL p = 0.1100 | WER BP = 0.821402 | WER OSD = 0.315364
+
+FINAL p = 0.1200 | WER BP = 0.941488 | WER OSD = 0.582408
+
+FINAL p = 0.1300 | WER BP = 0.986494 | WER OSD = 0.810026
+
+END
+Fri Aug  7 04:35:06 AM IST 2026
