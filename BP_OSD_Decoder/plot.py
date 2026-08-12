@@ -67,11 +67,11 @@ def plot_bp_vs_osd(code_label, filepath, color):
 
 if __name__ == "__main__":
     # Ensure simulate.py has been executed to generate the data
-    file_path = "results/gb_254_28_comparison.txt"
+    file_path = "results/tile_288_8_14_z_biased_comparison.txt"
     
     if os.path.exists(file_path):
         # Using black to perfectly replicate the A1 code style from the image
-        plot_bp_vs_osd(code_label="GB [254, 28]", filepath=file_path, color='red')
+        plot_bp_vs_osd(code_label="Tile [288, 8, 14] Infinite Z biased", filepath=file_path, color='black')
     else:
         print(f"Error: Could not find {file_path}.")
         print("Please run simulate.py first to generate the required Monte Carlo data.")

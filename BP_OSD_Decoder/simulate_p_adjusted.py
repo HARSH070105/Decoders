@@ -3,8 +3,8 @@ import os
 from tqdm import tqdm
 
 from logicals import build_canonical_logicals
-from channel import generate_depolarizing_error
-from decoder import setup_all_decoders
+from channel_p_adjusted import generate_depolarizing_error
+from decoder_p_adjusted import setup_all_decoders
 from failure import check_logical_failure
 
 def load_code(filepath):
@@ -26,7 +26,7 @@ def run_monte_carlo(filepath, error_rates, max_trials):
     results_osd = []
     
     for p in error_rates:
-        bp_x, bp_z, osd_x, osd_z = setup_all_decoders(HX, HZ, 2*p/3) #needed this adjustment as the p given to decoder is also scaled (p/3 for X and Z and P/3 added due to Y)
+        bp_x, bp_z, osd_x, osd_z = setup_all_decoders(HX, HZ, p) #just send p here, change the decoder and the channel to match the biases
         fails_bp = 0
         fails_osd = 0
         
@@ -65,9 +65,9 @@ def run_monte_carlo(filepath, error_rates, max_trials):
 
 if __name__ == "__main__":
     error_rates = [0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.1, 0.11, 0.12, 0.13]
-    trials = 500000 
+    trials = 5000000
     
-    code_name = "gb_126_28"
+    code_name = "tile_288_8_14"  # Change this to the desired code name (without .npz extension)
     print(f"--- Simulating Code: {code_name} ---")
     
     # Get the directory of this script
