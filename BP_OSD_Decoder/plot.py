@@ -60,18 +60,18 @@ def plot_bp_vs_osd(code_label, filepath, color):
 
     # Save and display
     plt.tight_layout()
-    plot_path = f'results/{code_label.replace(" ", "_").replace("[", "").replace("]", "").replace(",", "")}_bp_vs_osd.png'
+    plot_path = f'BP_OSD_Decoder/results/{code_label.replace(" ", "_").replace("[", "").replace("]", "").replace(",", "")}_bp_vs_osd.png'
     plt.savefig(plot_path, bbox_inches='tight')
     print(f"Plot saved successfully to {plot_path}")
     plt.show()
 
 if __name__ == "__main__":
     # Ensure simulate.py has been executed to generate the data
-    file_path = "results/tile_288_8_14_z_biased_comparison.txt"
+    file_path = "BP_OSD_Decoder/results/tile_288_8_14_x_biased_comparison.txt"
     
     if os.path.exists(file_path):
         # Using black to perfectly replicate the A1 code style from the image
-        plot_bp_vs_osd(code_label="Tile [288, 8, 14] Infinite Z biased", filepath=file_path, color='black')
+        plot_bp_vs_osd(code_label="Tile [288, 8, 14] X-biased", filepath=file_path, color='red')
     else:
         print(f"Error: Could not find {file_path}.")
         print("Please run simulate.py first to generate the required Monte Carlo data.")

@@ -2,8 +2,8 @@ from ldpc.bposd_decoder import BpOsdDecoder
 from ldpc.bp_decoder import BpDecoder
 
 def setup_all_decoders(HX, HZ, p, osd_order=0):
-    pz = 2*p/3
-    px = 2*p/3
+    pz = 0.0
+    px = p
     bp_x = BpDecoder(
         HZ,
         error_rate=px,

@@ -2,7 +2,7 @@ import numpy as np
 
 def generate_depolarizing_error(n, p):
     choices = [0, 1, 2, 3]
-    probs = [1 - p, p/3, p/3, p/3]
+    probs = [1 - p, p, 0, 0]
     
     errors = np.random.choice(choices, size=n, p=probs)
     

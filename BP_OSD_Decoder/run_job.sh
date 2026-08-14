@@ -16,6 +16,7 @@ hostname
 source /home2/harsh.kapoor/general/bin/activate
 
 python simulate_p_adjusted.py
+python plot.py
 
 
 echo "END"
