@@ -96,24 +96,24 @@ if __name__ == "__main__":
     # Ensure simulate.py has been executed for all of these to generate the data
     datasets_to_plot = [
         {
-            'label': 'Unbiased', 
-            'filepath': 'results/tile_288_8_14_comparison.txt', 
+            'label': 'Regular Codes', 
+            'filepath': 'results/tile_288_8_14_x_biased_comparison.txt', 
             'color': 'black'
         },
         {
-            'label': 'Z bias', 
-            'filepath': 'results/tile_288_8_14_z_biased_comparison.txt', 
+            'label': 'Bias Tailored Codes', 
+            'filepath': 'results/bt_tile_288_8_12_x_biased_comparison.txt', 
             'color': 'blue'
-        },
-        {
-            'label': 'X bias', 
-            'filepath': 'results/tile_288_8_14_x_biased_comparison.txt', 
-            'color': 'red'
         }
+        # {
+        #     'label': 'X bias', 
+        #     'filepath': 'results/tile_288_8_14_x_biased_comparison.txt', 
+        #     'color': 'red'
+        # }
     ]
     
     plot_multiple_bp_vs_osd(
         datasets=datasets_to_plot,
-        plot_title='Comparison of [[288, 8, 14]] Tile Codes',
-        save_filename='combined_codes_bp_vs_osd'
+        plot_title='Comparison of [[288, 8, 14]] Tile Codes X bias',
+        save_filename='BT vs Reg X Bias Comparison'
     )
