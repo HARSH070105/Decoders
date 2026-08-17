@@ -79,7 +79,7 @@ import os
 import numpy as np
 from scipy import sparse
 
-from Tile_code_builder import gf2_rank, OUT_DIR
+from tile_code_builder import gf2_rank, OUT_DIR
 
 __all__ = ["hadamard_rotate_sector2", "bias_tailor_and_save"]
 
@@ -161,18 +161,28 @@ def hadamard_rotate_sector2(tile_result: Dict, verbose: bool = True) -> Dict:
 
 
 def save_bias_tailored_code(name: str, bt_result: Dict, out_dir: str = OUT_DIR):
+    """
+    Saves using the SAME key convention as tile_code_builder.save_code()
+    (HX_data/HX_indices/HX_indptr/HX_shape, HZ_... likewise) so existing
+    decoder scripts that load '{code}.npz' expecting HX/HZ (e.g.
+    simulate_p_adjusted.py's load_code()) work unchanged on bias-tailored
+    codes too. For a non-CSS code, HX/HZ here are the per-check symplectic
+    X-part/Z-part (each row is one check's full Pauli support split into
+    its X- and Z-components) -- same shapes/semantics a decoder needs,
+    just not required to be disjoint per-row as in a CSS code.
+    """
     os.makedirs(out_dir, exist_ok=True)
-    GX, GZ = bt_result["GX"], bt_result["GZ"]
+    HX, HZ = bt_result["GX"], bt_result["GZ"]
     n, k = bt_result["n"], bt_result["k"]
 
-    GX_csr = sparse.csr_matrix(GX)
-    GZ_csr = sparse.csr_matrix(GZ)
+    HX_csr = sparse.csr_matrix(HX)
+    HZ_csr = sparse.csr_matrix(HZ)
 
     npz_path = os.path.join(out_dir, f"{name}.npz")
     np.savez(
         npz_path,
-        GX_data=GX_csr.data, GX_indices=GX_csr.indices, GX_indptr=GX_csr.indptr, GX_shape=np.array(GX.shape),
-        GZ_data=GZ_csr.data, GZ_indices=GZ_csr.indices, GZ_indptr=GZ_csr.indptr, GZ_shape=np.array(GZ.shape),
+        HX_data=HX_csr.data, HX_indices=HX_csr.indices, HX_indptr=HX_csr.indptr, HX_shape=np.array(HX.shape),
+        HZ_data=HZ_csr.data, HZ_indices=HZ_csr.indices, HZ_indptr=HZ_csr.indptr, HZ_shape=np.array(HZ.shape),
         n=n, k=k,
         num_X_checks=bt_result["num_X_checks"],
         num_Z_checks=bt_result["num_Z_checks"],
@@ -188,14 +198,14 @@ def save_bias_tailored_code(name: str, bt_result: Dict, out_dir: str = OUT_DIR):
         f.write(f"# sector2 (vertical, Hadamard-rotated) qubits = {bt_result['num_vertical_qubits']}\n")
         f.write(f"# rows 0..{bt_result['num_X_checks']-1} = rotated X-checks, "
                 f"rows {bt_result['num_X_checks']}..{bt_result['num_checks']-1} = rotated Z-checks\n")
-        f.write("# GX: symplectic X-part per check, GZ: symplectic Z-part per check\n")
-        f.write(f"# GX: {GX.shape[0]} x {GX.shape[1]}\n")
-        f.write("GX\n")
-        for row in GX:
+        f.write("# HX: symplectic X-part per check, HZ: symplectic Z-part per check\n")
+        f.write(f"# HX: {HX.shape[0]} x {HX.shape[1]}\n")
+        f.write("HX\n")
+        for row in HX:
             f.write(" ".join(str(b) for b in row) + "\n")
-        f.write(f"# GZ: {GZ.shape[0]} x {GZ.shape[1]}\n")
-        f.write("GZ\n")
-        for row in GZ:
+        f.write(f"# HZ: {HZ.shape[0]} x {HZ.shape[1]}\n")
+        f.write("HZ\n")
+        for row in HZ:
             f.write(" ".join(str(b) for b in row) + "\n")
 
     print(f"n={n}  k={k}  num_checks={bt_result['num_checks']}")
@@ -225,7 +235,7 @@ def bias_tailor_and_save(
 
 
 if __name__ == "__main__":
-    from Tile_code_builder import build_tile_code
+    from tile_code_builder import build_tile_code
 
     # Example: bias-tailor the [[288,8,12]] tile code.
     tile_result = build_tile_code(
