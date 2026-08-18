@@ -67,7 +67,7 @@ if __name__ == "__main__":
     error_rates = [0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.1, 0.11, 0.12, 0.13]
     trials = 5000000
     
-    code_name = "bt_tile_288_8_12"  # Change this to the desired code name (without .npz extension)
+    code_name = "bt_tile_288_8_12_x_biased"  # Change this to the desired code name (without .npz extension)
     print(f"--- Simulating Code: {code_name} ---")
     
     # Get the directory of this script

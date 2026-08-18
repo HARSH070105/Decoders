@@ -97,12 +97,12 @@ if __name__ == "__main__":
     datasets_to_plot = [
         {
             'label': 'Regular Codes', 
-            'filepath': 'results/tile_288_8_14_x_biased_comparison.txt', 
+            'filepath': 'results/tile_288_8_14_comparison.txt', 
             'color': 'black'
         },
         {
             'label': 'Bias Tailored Codes', 
-            'filepath': 'results/bt_tile_288_8_12_x_biased_comparison.txt', 
+            'filepath': 'results/bt_tile_288_8_12_comparison.txt', 
             'color': 'blue'
         }
         # {
@@ -114,6 +114,6 @@ if __name__ == "__main__":
     
     plot_multiple_bp_vs_osd(
         datasets=datasets_to_plot,
-        plot_title='Comparison of [[288, 8, 14]] Tile Codes X bias',
-        save_filename='BT vs Reg X Bias Comparison'
+        plot_title='Comparison of [[288, 8, 14]] Tile Codes UnBiased Noise',
+        save_filename='BT vs Reg Un-Biased Comparison'
     )
