@@ -1,79 +1,3 @@
-"""
-bias_tailored_tile_code.py
-
-Fits "tile codes" (Steffan, Choe, Breuckmann, Pereira, Eberhardt,
-arXiv:2504.09171) into the bias-tailored / XZZX framework of
-Roffe, Cohen, Quintavalle, Chandra, Campbell (arXiv:2202.01702).
-
-------------------------------------------------------------------------
-THE IDEA
-------------------------------------------------------------------------
-Bias-tailoring (Sec 4.3, Eq. 26 of the Roffe et al. paper) takes a CSS code
-
-    H_CSS = [  0     0   | H_Z1  H_Z2 ]
-            [ H_X1  H_X2 |   0     0  ]
-
-that is naturally split into two qubit "sectors" (sector 1, sector 2), and
-applies a Hadamard gate to every qubit in sector 2. Conjugating by H swaps
-X<->Z on those qubits for every stabiliser. Because H is Clifford, this
-preserves commutation of the whole stabiliser group and leaves n, k
-unchanged (only the code's response to biased noise changes: sector-2
-qubits now contribute their X-type errors to what used to be a purely
-Z-type check, and vice versa).
-
-Tile codes are already built from two qubit sectors -- horizontal-edge
-qubits and vertical-edge qubits -- exactly the "sector 1 / sector 2"
-structure the bias-tailored construction needs. This module Hadamard-rotates
-the vertical-edge qubits (sector 2) of a tile code, producing a non-CSS,
-XZZX-style bias-tailored tile code.
-
-Per check row, post-rotation:
-
-    X-check (originally pure X-type):
-        X-part = old X-support restricted to sector-1 (horizontal) qubits
-        Z-part = old X-support restricted to sector-2 (vertical) qubits
-
-    Z-check (originally pure Z-type):
-        Z-part = old Z-support restricted to sector-1 (horizontal) qubits
-        X-part = old Z-support restricted to sector-2 (vertical) qubits
-
-Every check keeps its own row (no merging of X/Z checks) -- it just becomes
-a genuinely mixed Pauli (both an X-part and a Z-part) exactly like the XZZX
-stabiliser in Fig. 4 of the bias-tailoring paper.
-
-Commutation is checked with the general (non-CSS) symplectic form:
-for checks g=(gx|gz), h=(hx|hz),
-
-    g and h commute  <=>  gx.hz^T + gz.hx^T = 0 (mod 2)
-
-This is verified for every pair before anything is saved.
-
-------------------------------------------------------------------------
-USAGE
-------------------------------------------------------------------------
-    from tile_code_builder import build_tile_code
-    from bias_tailored_tile_code import bias_tailor_and_save
-
-    result = build_tile_code(B=3, X_h={0,5,8}, X_v={2,6,7},
-                              bulk_cols=10, bulk_rows=10)
-    bias_tailor_and_save("bt_tile_288_8_12", result)
-
-------------------------------------------------------------------------
-OUTPUT
-------------------------------------------------------------------------
-For a code named e.g. "bt_tile_288_8_12", writes into ./codes/:
-
-    bt_tile_288_8_12.npz  -- sparse GX, GZ (per-check symplectic parts,
-                              scipy csr components) + n, k, num_checks
-    bt_tile_288_8_12.txt   -- human readable: GX and GZ as separate 0/1
-                              matrices (one row per check, space-separated),
-                              i.e. the same "separate X and Z" format as
-                              tile_code_builder.py's CSS output, except here
-                              GX/GZ are per-CHECK columns of a single mixed
-                              stabiliser list rather than disjoint X-checks
-                              and Z-checks (see note in the file header).
-"""
-
 from typing import Dict, Optional
 import os
 import numpy as np
@@ -85,25 +9,7 @@ __all__ = ["hadamard_rotate_sector2", "bias_tailor_and_save"]
 
 
 def hadamard_rotate_sector2(tile_result: Dict, verbose: bool = True) -> Dict:
-    """
-    Apply the bias-tailoring Hadamard rotation to the vertical-edge qubit
-    sector of a tile code produced by tile_code_builder.build_tile_code().
-
-    Parameters
-    ----------
-    tile_result : dict
-        The dict returned by build_tile_code() -- must contain
-        'HX', 'HZ', 'n', 'num_horizontal_qubits', 'num_vertical_qubits'.
-    verbose : bool
-
-    Returns
-    -------
-    dict with:
-        GX, GZ : (num_checks, n) uint8 arrays -- symplectic X-part and
-                 Z-part of every check (rows 0..nX-1 are the rotated
-                 X-checks, rows nX..nX+nZ-1 are the rotated Z-checks)
-        n, k, num_checks, num_horizontal_qubits, num_vertical_qubits
-    """
+    
     HX = tile_result["HX"].astype(np.uint8)
     HZ = tile_result["HZ"].astype(np.uint8)
     n_h = tile_result["num_horizontal_qubits"]
@@ -161,16 +67,7 @@ def hadamard_rotate_sector2(tile_result: Dict, verbose: bool = True) -> Dict:
 
 
 def save_bias_tailored_code(name: str, bt_result: Dict, out_dir: str = OUT_DIR):
-    """
-    Saves using the SAME key convention as tile_code_builder.save_code()
-    (HX_data/HX_indices/HX_indptr/HX_shape, HZ_... likewise) so existing
-    decoder scripts that load '{code}.npz' expecting HX/HZ (e.g.
-    simulate_p_adjusted.py's load_code()) work unchanged on bias-tailored
-    codes too. For a non-CSS code, HX/HZ here are the per-check symplectic
-    X-part/Z-part (each row is one check's full Pauli support split into
-    its X- and Z-components) -- same shapes/semantics a decoder needs,
-    just not required to be disjoint per-row as in a CSS code.
-    """
+    
     os.makedirs(out_dir, exist_ok=True)
     HX, HZ = bt_result["GX"], bt_result["GZ"]
     n, k = bt_result["n"], bt_result["k"]

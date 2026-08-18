@@ -1,77 +1,3 @@
-"""
-tile_code_builder.py
-
-Build CSS parity-check matrices for "tile codes" (Steffan, Choe, Breuckmann,
-Pereira, Eberhardt, arXiv:2504.09171), from a compact tile specification.
-
-------------------------------------------------------------------------
-INPUT FORMAT (as used by the caller)
-------------------------------------------------------------------------
-A tile lives in a B x B box. Each cell of the box is flattened to a single
-index
-
-    a = x + B*y,   x, y in {0, ..., B-1}
-
-X_h : set of flat indices `a` where the X-tile has a HORIZONTAL edge
-X_v : set of flat indices `a` where the X-tile has a VERTICAL edge
-
-The Z-tile is derived automatically from condition (T2) of the paper
-(guarantees the two tiles commute at every relative anchor position):
-
-    X horizontal edge at a          ->  Z vertical   edge at B^2 - 1 - a
-    X vertical   edge at a          ->  Z horizontal edge at B^2 - 1 - a
-
-i.e.
-    Z_h = { B*B - 1 - a : a in X_v }
-    Z_v = { B*B - 1 - a : a in X_h }
-
-(You can also pass Z_h/Z_v explicitly if you don't want them auto-derived.)
-
-------------------------------------------------------------------------
-GRID / LAYOUT
-------------------------------------------------------------------------
-Bulk stabilizers are placed at anchors (i,j), i in [0,bulk_cols), j in
-[0,bulk_rows) (unrotated rectangular layout, matching the paper's "10x10
-copies of the bulk tile" example for [[288,8,12]]).
-
-Boundary stabilizers are added by extending the anchor lattice by B-1 extra
-rows of X-anchors above/below (spanning only the original column range) and
-B-1 extra columns of Z-anchors left/right (spanning only the original row
-range) of the bulk block -- i.e. a clean rectangular boundary strip with no
-extra stabilizers placed in the four corners. This matches Fig. 1 of the
-paper and is what makes the boundary stabilizers commute for the [[288,8,12]]
-tile; a naive corner-extended version does not commute (fails at all 4
-corners) for this tile.
-
-Every run VERIFIES H_X @ H_Z^T == 0 (mod 2) before saving anything, and
-raises with diagnostic detail if it doesn't -- it will not silently save a
-broken code.
-
-------------------------------------------------------------------------
-OUTPUT
-------------------------------------------------------------------------
-For a code named e.g. "tile_288_8_12", writes into ./codes/:
-    tile_288_8_12.npz   -- sparse HX, HZ (scipy csr components) + n, k
-    tile_288_8_12.txt    -- human-readable: HX and HZ as separate
-                              0/1 matrices, one row per line, space-separated
-
-------------------------------------------------------------------------
-USAGE
-------------------------------------------------------------------------
-    from tile_code_builder import build_and_save
-
-    build_and_save(
-        name="tile_288_8_12",
-        B=3,
-        X_h={0, 5, 8},
-        X_v={2, 6, 7},
-        bulk_cols=10,
-        bulk_rows=10,
-        expected_n=288,
-        expected_k=8,
-    )
-"""
-
 from dataclasses import dataclass
 from typing import List, Tuple, Dict, Set, Optional, Iterable
 import os
@@ -179,15 +105,6 @@ def build_tile_code(
     if verbose:
         print(f"[bulk] {len(bulk_anchors)} anchors -> {len(qubit_set)} qubits")
 
-    # ---- boundary anchors (Appendix A extension) ----
-    # NOTE: extra X-rows span only the ORIGINAL bulk column range (not the
-    # Z-extended range), and extra Z-columns span only the ORIGINAL bulk
-    # row range -- i.e. we deliberately do NOT extend into the four
-    # corners. For the [[288,8,12]] weight-6 tile this is what makes the
-    # boundary stabilizers commute (the naive "extend into corners too"
-    # version produces ~60 anticommuting corner pairs). This matches the
-    # picture in Fig. 1 of the paper, which shows a clean rectangular
-    # boundary strip with no extra corner stabilizers.
     extra = B - 1
     x_anchors = list(bulk_anchors)
     z_anchors = list(bulk_anchors)

@@ -102,7 +102,7 @@ if __name__ == "__main__":
         },
         {
             'label': 'Bias Tailored Codes', 
-            'filepath': 'results/bt_tile_288_8_12_comparison.txt', 
+            'filepath': 'results/bt_tile_288_8_12_z_biased_comparison.txt', 
             'color': 'blue'
         }
         # {
@@ -114,6 +114,6 @@ if __name__ == "__main__":
     
     plot_multiple_bp_vs_osd(
         datasets=datasets_to_plot,
-        plot_title='Comparison of [[288, 8, 14]] Tile Codes UnBiased Noise',
-        save_filename='BT vs Reg Un-Biased Comparison'
+        plot_title='Comparison of [[288, 8, 14]] Tile Codes Z-Biased Noise',
+        save_filename='BT vs Reg Z-Biased Comparison'
     )
