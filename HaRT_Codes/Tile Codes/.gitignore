@@ -1,4 +1,4 @@
-BP_OSD_Decoder/logs/
+logs/
 *.log
 *.err
 *.out
