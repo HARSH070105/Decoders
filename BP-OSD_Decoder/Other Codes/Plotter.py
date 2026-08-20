@@ -213,6 +213,6 @@ def plot_multiple_bp_vs_osd(code_name):
 # ONLY CHANGE THIS
 # =============================================================
 
-code_name = "gb_254_28"
+code_name = "ghp_882_24"
 
 plot_multiple_bp_vs_osd(code_name)
