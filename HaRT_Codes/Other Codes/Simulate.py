@@ -22,8 +22,7 @@ def run_monte_carlo(filepath, error_rates, max_trials):
     LX, LZ = build_canonical_logicals(HX, HZ)
     print(f"Logicals generated: k = {LX.shape[0]}")
     
-    # noise_models = ['depolarizing', 'pure_x', 'pure_z']
-    noise_models = ['pure_z']
+    noise_models = ['depolarizing', 'pure_x', 'pure_z']
     all_results = {}
     
     for model in noise_models:
@@ -74,7 +73,7 @@ if __name__ == "__main__":
     error_rates = [0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.1, 0.11, 0.12, 0.13, 0.14, 0.15]
     trials = 50000
     
-    code_name = "tile_288_8_14" 
+    code_name = "ghp_882_24" 
     print(f"--- Simulating Code: {code_name} ---")
     
     script_dir = os.path.dirname(os.path.abspath(__file__))

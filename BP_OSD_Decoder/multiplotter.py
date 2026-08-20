@@ -97,17 +97,17 @@ if __name__ == "__main__":
     datasets_to_plot = [
         {
             'label': 'BT on UnBiased', 
-            'filepath': 'results/tile_288_8_12_z_comparison.txt', 
+            'filepath': 'results/tile_288_8_14_z_comparison.txt', 
             'color': 'black'
         },
-        # {
-        #     'label': 'BT on X-Biased', 
-        #     'filepath': 'results/bt_tile_288_8_12_x_biased_comparison.txt', 
-        #     'color': 'red'
-        # },
+        {
+            'label': 'BT on X-Biased', 
+            'filepath': 'results/tile_288_8_14_x_biased_comparison.txt', 
+            'color': 'red'
+        },
         {
             'label': 'BT on Z-Biased', 
-            'filepath': 'results/bt_tile_288_8_12_z_biased_comparison.txt', 
+            'filepath': 'results/tile_288_8_14_z_biased_comparison.txt', 
             'color': 'blue'
         }
     ]
