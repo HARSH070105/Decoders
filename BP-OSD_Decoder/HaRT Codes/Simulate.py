@@ -23,7 +23,6 @@ def run_monte_carlo(filepath, error_rates, max_trials):
     print(f"Logicals generated: k = {LX.shape[0]}")
     
     noise_models = ['depolarizing', 'pure_x', 'pure_z']
-    # noise_models = ['pure_z']
     all_results = {}
     
     for model in noise_models:
