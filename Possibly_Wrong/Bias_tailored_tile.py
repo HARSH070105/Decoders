@@ -3,7 +3,7 @@ import os
 import numpy as np
 from scipy import sparse
 
-from tile_code_builder import gf2_rank, OUT_DIR
+from Possibly_Wrong.tile_code_builder import gf2_rank, OUT_DIR
 
 __all__ = ["hadamard_rotate_sector2", "bias_tailor_and_save"]
 
@@ -132,7 +132,7 @@ def bias_tailor_and_save(
 
 
 if __name__ == "__main__":
-    from tile_code_builder import build_tile_code
+    from Possibly_Wrong.tile_code_builder import build_tile_code
 
     # Example: bias-tailor the [[288,8,12]] tile code.
     tile_result = build_tile_code(

@@ -2,10 +2,10 @@ import numpy as np
 import os
 from tqdm import tqdm
 
-from logicals import build_canonical_logicals
-from channel_p_adjusted import generate_depolarizing_error
-from decoder_p_adjusted import setup_all_decoders
-from failure import check_logical_failure
+from Possibly_Wrong.logicals import build_canonical_logicals
+from Possibly_Wrong.channel_p_adjusted import generate_depolarizing_error
+from Possibly_Wrong.decoder_p_adjusted import setup_all_decoders
+from Possibly_Wrong.failure import check_logical_failure
 
 def load_code(filepath):
     data = np.load(filepath)
