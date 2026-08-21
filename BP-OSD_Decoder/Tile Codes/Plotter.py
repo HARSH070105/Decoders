@@ -213,6 +213,6 @@ def plot_multiple_bp_vs_osd(code_name):
 # ONLY CHANGE THIS
 # =============================================================
 
-code_name = "tile_288_8_12"
+code_name = "tile_512_18_19"  # Change this to the desired code name
 
 plot_multiple_bp_vs_osd(code_name)

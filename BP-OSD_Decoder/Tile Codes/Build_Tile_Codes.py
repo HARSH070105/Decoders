@@ -351,60 +351,74 @@ def build_and_save(
 if __name__ == "__main__":
 
     print("=" * 70)
-    print("[[288, 8, 12]]  B=3  weight-6")
+    print("Tile Toric Code")
     print("=" * 70)
     build_and_save(
-        name="tile_288_8_12", 
-        B=3,
-        X_h={0, 5, 8}, 
-        X_v={2, 6, 7},
+        name="tile_toric", 
+        B=2,
+        X_h={2, 3}, 
+        X_v={1, 3},
         bulk_cols=10, 
         bulk_rows=10,
-        expected_n=288, 
-        expected_k=8,
+        expected_n=221, 
+        expected_k=1,
     )
 
-    print("\n" + "=" * 70)
-    print("[[288, 8, 14]]  B=3  weight-8")
-    print("=" * 70)
-    build_and_save(
-        name="tile_288_8_14", 
-        B=3,
-        X_h={0, 2, 3, 6}, 
-        X_v={0, 4, 6, 8},
-        bulk_cols=10, 
-        bulk_rows=10,
-        expected_n=288, 
-        expected_k=8,
-    )
+    # print("=" * 70)
+    # print("[[288, 8, 12]]  B=3  weight-6")
+    # print("=" * 70)
+    # build_and_save(
+    #     name="tile_288_8_12", 
+    #     B=3,
+    #     X_h={0, 5, 8}, 
+    #     X_v={2, 6, 7},
+    #     bulk_cols=10, 
+    #     bulk_rows=10,
+    #     expected_n=288, 
+    #     expected_k=8,
+    # )
 
-    print("\n" + "=" * 70)
-    print("[[288, 18, 13]]  B=4  weight-8")
-    print("=" * 70)
-    build_and_save(
-        name="tile_288_18_13", 
-        B=4,
-        X_h={0, 3, 10, 12},
-        X_v={1, 4, 5, 15},
-        bulk_cols=9,
-        bulk_rows=9,
-        expected_n=288, 
-        expected_k=18,
-    )
+    # print("\n" + "=" * 70)
+    # print("[[288, 8, 14]]  B=3  weight-8")
+    # print("=" * 70)
+    # build_and_save(
+    #     name="tile_288_8_14", 
+    #     B=3,
+    #     X_h={0, 2, 3, 6}, 
+    #     X_v={0, 4, 6, 8},
+    #     bulk_cols=10, 
+    #     bulk_rows=10,
+    #     expected_n=288, 
+    #     expected_k=8,
+    # )
 
-    print("\n" + "=" * 70)
-    print("[[512, 18, 19]]  B=4  weight-8  (same tile as above, bulk=13x13)")
-    print("=" * 70)
-    build_and_save(
-        name="tile_512_18_19",
-        B=4,
-        X_h={0, 3, 10, 12},
-        X_v={1, 4, 5, 15},
-        bulk_cols=13, 
-        bulk_rows=13,
-        expected_n=512, 
-        expected_k=18,
-    )
+    # print("\n" + "=" * 70)
+    # print("[[288, 18, 13]]  B=4  weight-8")
+    # print("=" * 70)
+    # build_and_save(
+    #     name="tile_288_18_13", 
+    #     B=4,
+    #     X_h={0, 3, 10, 12},
+    #     X_v={1, 4, 5, 15},
+    #     bulk_cols=9,
+    #     bulk_rows=9,
+    #     expected_n=288, 
+    #     expected_k=18,
+    # )
+
+    # print("\n" + "=" * 70)
+    # print("[[512, 18, 19]]  B=4  weight-8  (same tile as above, bulk=13x13)")
+    # print("=" * 70)
+    # build_and_save(
+    #     name="tile_512_18_19",
+    #     B=4,
+    #     X_h={0, 3, 10, 12},
+    #     X_v={1, 4, 5, 15},
+    #     bulk_cols=13, 
+    #     bulk_rows=13,
+    #     expected_n=512, 
+    #     expected_k=18,
+    # )
 
     # ------------------------------------------------------------------
     # search_tile() is available for exploring other tile shapes /
