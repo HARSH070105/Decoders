@@ -73,7 +73,7 @@ if __name__ == "__main__":
     error_rates = [0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.1, 0.11, 0.12, 0.13, 0.14, 0.15]
     trials = 50000
     
-    code_name = "tile_288_8_14" 
+    code_name = "tile_288_8_12" 
     print(f"--- Simulating Code: {code_name} ---")
     
     script_dir = os.path.dirname(os.path.abspath(__file__))

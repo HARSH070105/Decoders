@@ -147,7 +147,7 @@ if __name__ == "__main__":
     error_rates = [0.01, 0.02, 0.03, 0.04, 0.05,
                    0.06, 0.07, 0.08, 0.09, 0.10,
                    0.11, 0.12, 0.13, 0.14, 0.15]
-    trials = 50000
+    trials = 200000
 
     code_name = "tile_288_8_14"      # same .npz as used in Simulate.py
     print(f"=== Bias-tailored simulation: {code_name} ===\n")
@@ -162,7 +162,7 @@ if __name__ == "__main__":
 
     for model, (wer_bp, wer_osd) in results_dict.items():
         save_path = os.path.join(results_dir,
-                                 f"{code_name}_BT_{model}_comparison.txt")
+                                 f"BT_{code_name}_{model}_comparison.txt")
         np.savetxt(save_path,
                    np.column_stack((error_rates, wer_bp, wer_osd)),
                    header="p  wer_bp  wer_osd", fmt="%.6f")

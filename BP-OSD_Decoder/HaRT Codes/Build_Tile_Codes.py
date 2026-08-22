@@ -95,15 +95,15 @@ def build_tile_code(
         print(f"X-tile: h={sorted(x_h_off)} v={sorted(x_v_off)} (weight {len(X_h)+len(X_v)})")
         print(f"Z-tile: h={sorted(z_h_off)} v={sorted(z_v_off)} (weight {len(Z_h)+len(Z_v)})")
 
-    # ---- bulk anchors & qubit set ----
+    # ---- bulk anchors ----
     bulk_anchors = [(i, j) for i in range(bulk_cols) for j in range(bulk_rows)]
-    qubit_set: Set[Tuple[str, int, int]] = set()
-    for a in bulk_anchors:
-        qubit_set |= _edges_at_anchor(x_h_off, x_v_off, a)
-        qubit_set |= _edges_at_anchor(z_h_off, z_v_off, a)
 
     if verbose:
-        print(f"[bulk] {len(bulk_anchors)} anchors -> {len(qubit_set)} qubits")
+        bulk_qubit_preview: Set[Tuple[str, int, int]] = set()
+        for a in bulk_anchors:
+            bulk_qubit_preview |= _edges_at_anchor(x_h_off, x_v_off, a)
+            bulk_qubit_preview |= _edges_at_anchor(z_h_off, z_v_off, a)
+        print(f"[bulk] {len(bulk_anchors)} anchors -> {len(bulk_qubit_preview)} qubits (bulk only, before boundary)")
 
     extra = B - 1
     x_anchors = list(bulk_anchors)
@@ -121,6 +121,27 @@ def build_tile_code(
 
     if verbose:
         print(f"[boundary] extended to {len(x_anchors)} X-anchors, {len(z_anchors)} Z-anchors")
+
+    # ---- qubit_set MUST be built from ALL anchors (bulk + boundary) ----
+    # Building it from bulk anchors only (as an earlier version of this code
+    # did) truncates boundary stabilizer supports asymmetrically: a qubit
+    # that only appears near a boundary check (never in the bulk) gets
+    # dropped from qubit_set, so it silently disappears from that check's
+    # support -- but NOT necessarily from the neighboring check of the
+    # opposite type at the same anchor, since X- and Z-anchors are extended
+    # along different axes. That parity mismatch is exactly what breaks
+    # commutation for tile shapes that aren't a simple axis-aligned
+    # "staircase" (the hypergraph-product case from Appendix A always
+    # happened to avoid it). Including boundary anchors here fixes this
+    # for arbitrary (T1)+(T2)-valid tiles.
+    qubit_set: Set[Tuple[str, int, int]] = set()
+    for a in x_anchors:
+        qubit_set |= _edges_at_anchor(x_h_off, x_v_off, a)
+    for a in z_anchors:
+        qubit_set |= _edges_at_anchor(z_h_off, z_v_off, a)
+
+    if verbose:
+        print(f"[qubit_set] {len(qubit_set)} qubits (bulk + boundary anchors)")
 
     # ---- truncate supports to qubit_set ----
     x_stabs = []
@@ -198,10 +219,6 @@ def build_tile_code(
     )
 
 
-# ============================================================
-# Save (.npz + .txt)
-# ============================================================
-
 def save_code(name: str, HX: np.ndarray, HZ: np.ndarray, out_dir: str = OUT_DIR,
               num_horizontal_qubits: Optional[int] = None):
     os.makedirs(out_dir, exist_ok=True)
@@ -213,8 +230,6 @@ def save_code(name: str, HX: np.ndarray, HZ: np.ndarray, out_dir: str = OUT_DIR,
     HX_csr = sparse.csr_matrix(HX)
     HZ_csr = sparse.csr_matrix(HZ)
 
-    # num_horizontal_qubits is needed by the bias-tailored simulator to know
-    # the sector-1 / sector-2 split.  The plain CSS loader ignores it.
     n_h = num_horizontal_qubits if num_horizontal_qubits is not None else n
 
     npz_path = os.path.join(out_dir, f"{name}.npz")
@@ -242,6 +257,65 @@ def save_code(name: str, HX: np.ndarray, HZ: np.ndarray, out_dir: str = OUT_DIR,
     print(f"saved -> {npz_path}")
     print(f"saved -> {txt_path}")
     return dict(n=n, k=k, npz_path=npz_path, txt_path=txt_path)
+
+
+def search_tile(
+    B: int,
+    weight: int,
+    bulk_cols: int,
+    bulk_rows: int,
+    expected_n: int,
+    expected_k: int,
+    max_tries: int = 5000,
+    seed: int = 0,
+    also_check_bulk: Optional[Tuple[int, int]] = None,
+    also_expected: Optional[Tuple[int, int]] = None,
+):
+    """
+    Randomly search for an (X_h, X_v) tile pair of the given weight (split
+    evenly between horizontal/vertical support) in a B x B box that:
+      1. satisfies the commutation check in build_tile_code() (i.e. the
+         Appendix A-style boundary extension used here is actually valid
+         for this tile shape), and
+      2. produces the requested [[expected_n, expected_k, ...]] code.
+
+    Returns (X_h, X_v) on success, or None if max_tries is exhausted.
+    """
+    import random
+    rng = random.Random(seed)
+    half = weight // 2
+    rest = weight - half
+
+    for _ in range(max_tries):
+        X_h = frozenset(rng.sample(range(B * B), half))
+        X_v = frozenset(rng.sample(range(B * B), rest))
+        try:
+            r = build_tile_code(B=B, X_h=X_h, X_v=X_v,
+                                bulk_cols=bulk_cols, bulk_rows=bulk_rows,
+                                verbose=False)
+        except ValueError:
+            continue
+        n = r["n"]
+        k = n - gf2_rank(r["HX"]) - gf2_rank(r["HZ"])
+        if (n, k) != (expected_n, expected_k):
+            continue
+
+        if also_check_bulk is not None:
+            try:
+                r2 = build_tile_code(B=B, X_h=X_h, X_v=X_v,
+                                     bulk_cols=also_check_bulk[0],
+                                     bulk_rows=also_check_bulk[1],
+                                     verbose=False)
+            except ValueError:
+                continue
+            n2 = r2["n"]
+            k2 = n2 - gf2_rank(r2["HX"]) - gf2_rank(r2["HZ"])
+            if (n2, k2) != also_expected:
+                continue
+
+        return X_h, X_v
+
+    return None
 
 
 def build_and_save(
@@ -275,13 +349,84 @@ def build_and_save(
 
 
 if __name__ == "__main__":
+
+    print("=" * 70)
+    print("Tile Toric Code")
+    print("=" * 70)
     build_and_save(
-        name="tile_288_8_14",
-        B=3,
-        X_h={0, 2, 3, 6},
-        X_v={0, 4, 6, 8},
-        bulk_cols=10,
+        name="tile_toric", 
+        B=2,
+        X_h={2, 3}, 
+        X_v={1, 3},
+        bulk_cols=10, 
         bulk_rows=10,
-        expected_n=288,
+        expected_n=221, 
+        expected_k=1,
+    )
+
+    print("=" * 70)
+    print("[[288, 8, 12]]  B=3  weight-6")
+    print("=" * 70)
+    build_and_save(
+        name="tile_288_8_12", 
+        B=3,
+        X_h={0, 5, 8}, 
+        X_v={2, 6, 7},
+        bulk_cols=10, 
+        bulk_rows=10,
+        expected_n=288, 
         expected_k=8,
     )
+
+    print("\n" + "=" * 70)
+    print("[[288, 8, 14]]  B=3  weight-8")
+    print("=" * 70)
+    build_and_save(
+        name="tile_288_8_14", 
+        B=3,
+        X_h={0, 2, 3, 6}, 
+        X_v={0, 4, 6, 8},
+        bulk_cols=10, 
+        bulk_rows=10,
+        expected_n=288, 
+        expected_k=8,
+    )
+
+    print("\n" + "=" * 70)
+    print("[[288, 18, 13]]  B=4  weight-8")
+    print("=" * 70)
+    build_and_save(
+        name="tile_288_18_13", 
+        B=4,
+        X_h={0, 3, 10, 12},
+        X_v={1, 4, 5, 15},
+        bulk_cols=9,
+        bulk_rows=9,
+        expected_n=288, 
+        expected_k=18,
+    )
+
+    print("\n" + "=" * 70)
+    print("[[512, 18, 19]]  B=4  weight-8  (same tile as above, bulk=13x13)")
+    print("=" * 70)
+    build_and_save(
+        name="tile_512_18_19",
+        B=4,
+        X_h={0, 3, 10, 12},
+        X_v={1, 4, 5, 15},
+        bulk_cols=13, 
+        bulk_rows=13,
+        expected_n=512, 
+        expected_k=18,
+    )
+
+    # ------------------------------------------------------------------
+    # search_tile() is available for exploring other tile shapes /
+    # (n,k) targets, e.g.:
+    
+    #   X_h, X_v = search_tile(
+    #       B=5, weight=10, bulk_cols=9, bulk_rows=9,
+    #       expected_n=512, expected_k=18,
+    #   )
+    #   print(X_h, X_v)
+    # ------------------------------------------------------------------
