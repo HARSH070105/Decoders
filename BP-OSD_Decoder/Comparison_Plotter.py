@@ -89,7 +89,9 @@ def plot_bt_vs_regular(code_suffix):
     # Save Output
     # ---------------------------------------------------------
     plt.tight_layout()
-    save_path = os.path.join(script_dir, f"{code_suffix}_architecture_comparison.png")
+    results_dir = os.path.join(script_dir, "Results")
+    os.makedirs(results_dir, exist_ok=True)
+    save_path = os.path.join(results_dir, f"{code_suffix}_architecture_comparison.png")
     plt.savefig(save_path, bbox_inches='tight')
     print(f"Plot saved successfully to: {save_path}")
     plt.show()
